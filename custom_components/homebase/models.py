@@ -107,11 +107,30 @@ class Chore:
         elif (
             self.schedule_type == ScheduleType.RELATIVE
             and self.interval_days is not None
+            and self.interval_days > 0
         ):
             self.completed = False
             self.due_at = completion.completed_at + timedelta(
                 days=self.interval_days
             )
+
+        elif (
+            self.schedule_type == ScheduleType.FIXED
+            and self.interval_days is not None
+            and self.interval_days > 0
+        ):
+            self.completed = False
+            interval = timedelta(days=self.interval_days)
+
+            if self.due_at is None:
+                self.due_at = completion.completed_at + interval
+            else:
+                next_due = self.due_at + interval
+
+                while next_due <= completion.completed_at:
+                    next_due += interval
+
+                self.due_at = next_due
 
         return completion
 
@@ -143,7 +162,21 @@ class Chore:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Chore":
         """Create a chore from stored data."""
+        schedule_type = ScheduleType(
+            data.get("schedule_type", ScheduleType.ONE_TIME.value)
+        )
         created_at = datetime_from_storage(data.get("created_at"))
+        last_completed_at = datetime_from_storage(
+            data.get("last_completed_at")
+        )
+
+        completed = data.get("completed")
+
+        if completed is None:
+            completed = (
+                schedule_type == ScheduleType.ONE_TIME
+                and last_completed_at is not None
+            )
 
         return cls(
             chore_id=data["chore_id"],
@@ -151,17 +184,13 @@ class Chore:
             description=data.get("description", ""),
             area=data.get("area"),
             assignee=data.get("assignee"),
-            schedule_type=ScheduleType(
-                data.get("schedule_type", ScheduleType.ONE_TIME.value)
-            ),
+            schedule_type=schedule_type,
             due_at=datetime_from_storage(data.get("due_at")),
             interval_days=data.get("interval_days"),
             paused=data.get("paused", False),
-            completed=data.get("completed", False),
+            completed=completed,
             created_at=created_at or utc_now(),
-            last_completed_at=datetime_from_storage(
-                data.get("last_completed_at")
-            ),
+            last_completed_at=last_completed_at,
             completion_history=[
                 ChoreCompletion.from_dict(completion)
                 for completion in data.get("completion_history", [])
