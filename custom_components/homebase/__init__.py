@@ -1,0 +1,9 @@
+"""The HomeBase integration."""
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.typing import ConfigType
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up HomeBase."""
+    return True
