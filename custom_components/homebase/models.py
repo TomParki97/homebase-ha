@@ -85,6 +85,22 @@ class Chore:
     last_completed_at: datetime | None = None
     completion_history: list[ChoreCompletion] = field(default_factory=list)
 
+    def complete(
+        self,
+        completed_by: str | None = None,
+        note: str = "",
+    ) -> ChoreCompletion:
+        """Mark the chore as completed."""
+        completion = ChoreCompletion(
+            completed_by=completed_by,
+            note=note,
+        )
+
+        self.last_completed_at = completion.completed_at
+        self.completion_history.append(completion)
+
+        return completion
+
     def to_dict(self) -> dict[str, Any]:
         """Convert the chore to JSON-serializable data."""
         return {

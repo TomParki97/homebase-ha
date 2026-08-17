@@ -59,6 +59,26 @@ class HomeBaseStorage:
         self._chores[chore.chore_id] = chore
         await self.async_save()
 
+    async def async_complete_chore(
+        self,
+        chore_id: str,
+        completed_by: str | None = None,
+        note: str = "",
+    ) -> bool:
+        """Complete a chore and save the change."""
+        chore = self.get_chore(chore_id)
+
+        if chore is None:
+            return False
+
+        chore.complete(
+            completed_by=completed_by,
+            note=note,
+        )
+
+        await self.async_save()
+        return True
+
     async def async_remove_chore(self, chore_id: str) -> bool:
         """Remove a chore and save the change."""
         if chore_id not in self._chores:

@@ -24,3 +24,36 @@ add_chore:
       description: Person responsible for the chore.
       selector:
         text:
+
+complete_chore:
+  name: Complete chore
+  description: Mark a HomeBase chore as completed.
+  fields:
+    chore_id:
+      name: Chore ID
+      description: Unique ID of the chore to complete.
+      required: true
+      selector:
+        text:
+    completed_by:
+      name: Completed by
+      description: Person who completed the chore.
+      selector:
+        text:
+    note:
+      name: Note
+      description: Optional note about this completion.
+      selector:
+        text:
+          multiline: true
+
+remove_chore:
+  name: Remove chore
+  description: Permanently remove a chore from HomeBase.
+  fields:
+    chore_id:
+      name: Chore ID
+      description: Unique ID of the chore to remove.
+      required: true
+      selector:
+        text:
