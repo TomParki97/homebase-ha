@@ -1,7 +1,7 @@
 """Data models for HomeBase."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import StrEnum
 from typing import Any
 from uuid import uuid4
@@ -27,6 +27,7 @@ class ChoreStatus(StrEnum):
     DUE_TODAY = "due_today"
     OVERDUE = "overdue"
     PAUSED = "paused"
+    COMPLETED = "completed"
 
 
 class ScheduleType(StrEnum):
@@ -79,6 +80,7 @@ class Chore:
     interval_days: int | None = None
 
     paused: bool = False
+    completed: bool = False
 
     chore_id: str = field(default_factory=lambda: uuid4().hex)
     created_at: datetime = field(default_factory=utc_now)
@@ -99,6 +101,18 @@ class Chore:
         self.last_completed_at = completion.completed_at
         self.completion_history.append(completion)
 
+        if self.schedule_type == ScheduleType.ONE_TIME:
+            self.completed = True
+
+        elif (
+            self.schedule_type == ScheduleType.RELATIVE
+            and self.interval_days is not None
+        ):
+            self.completed = False
+            self.due_at = completion.completed_at + timedelta(
+                days=self.interval_days
+            )
+
         return completion
 
     def to_dict(self) -> dict[str, Any]:
@@ -113,6 +127,7 @@ class Chore:
             "due_at": self.due_at.isoformat() if self.due_at else None,
             "interval_days": self.interval_days,
             "paused": self.paused,
+            "completed": self.completed,
             "created_at": self.created_at.isoformat(),
             "last_completed_at": (
                 self.last_completed_at.isoformat()
@@ -142,6 +157,7 @@ class Chore:
             due_at=datetime_from_storage(data.get("due_at")),
             interval_days=data.get("interval_days"),
             paused=data.get("paused", False),
+            completed=data.get("completed", False),
             created_at=created_at or utc_now(),
             last_completed_at=datetime_from_storage(
                 data.get("last_completed_at")
