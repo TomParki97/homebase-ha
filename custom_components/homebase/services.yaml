@@ -1,0 +1,26 @@
+add_chore:
+  name: Add chore
+  description: Add a new chore to HomeBase.
+  fields:
+    name:
+      name: Name
+      description: Name of the chore.
+      required: true
+      selector:
+        text:
+    description:
+      name: Description
+      description: Optional details about the chore.
+      selector:
+        text:
+          multiline: true
+    area:
+      name: Area
+      description: Area of the home associated with the chore.
+      selector:
+        text:
+    assignee:
+      name: Assignee
+      description: Person responsible for the chore.
+      selector:
+        text:
