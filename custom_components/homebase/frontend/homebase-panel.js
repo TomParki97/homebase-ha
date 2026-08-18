@@ -10,6 +10,16 @@ class HomeBasePanel extends HTMLElement {
     this._chores = [];
     this._notice = null;
     this._completingChoreId = null;
+    this._showAddChore = false;
+    this._addChoreDraft = {
+      name: "",
+      description: "",
+      area: "",
+      assignee: "",
+      schedule_type: "one_time",
+      due_at: "",
+      interval_days: "",
+    };
   }
 
   set hass(value) {
@@ -79,6 +89,112 @@ class HomeBasePanel extends HTMLElement {
     };
 
     return labels[status] || status;
+  }
+
+  async addChore(form) {
+    if (!this._hass) {
+      return;
+    }
+
+    const formData = new FormData(form);
+
+    this._addChoreDraft = {
+      name: String(formData.get("name") || ""),
+      description: String(formData.get("description") || ""),
+      area: String(formData.get("area") || ""),
+      assignee: String(formData.get("assignee") || ""),
+      schedule_type: String(
+        formData.get("schedule_type") || "one_time"
+      ),
+      due_at: String(formData.get("due_at") || ""),
+      interval_days: String(
+        formData.get("interval_days") || ""
+      ),
+    };
+
+    const name = this._addChoreDraft.name.trim();
+    const description = String(
+      formData.get("description") || ""
+    ).trim();
+    const area = String(formData.get("area") || "").trim();
+    const assignee = String(
+      formData.get("assignee") || ""
+    ).trim();
+    const scheduleType = String(
+      formData.get("schedule_type") || "one_time"
+    );
+    const dueValue = String(formData.get("due_at") || "").trim();
+    const intervalValue = String(
+      formData.get("interval_days") || ""
+    ).trim();
+
+    if (!name) {
+      this._error = "Chore name is required.";
+      this.render();
+      return;
+    }
+
+    if (
+      scheduleType !== "one_time" &&
+      !intervalValue
+    ) {
+      this._error =
+        "Repeat every is required for recurring chores.";
+      this.render();
+      return;
+    }
+
+    const serviceData = {
+      name,
+      description,
+      schedule_type: scheduleType,
+    };
+
+    if (area) {
+      serviceData.area = area;
+    }
+
+    if (assignee) {
+      serviceData.assignee = assignee;
+    }
+
+    if (intervalValue) {
+      serviceData.interval_days = Number(intervalValue);
+    }
+
+    if (dueValue) {
+      serviceData.due_at = new Date(dueValue).toISOString();
+    }
+
+    this._error = null;
+
+    try {
+      await this._hass.callService(
+        "homebase",
+        "add_chore",
+        serviceData
+      );
+
+      this._showAddChore = false;
+      this._addChoreDraft = {
+        name: "",
+        description: "",
+        area: "",
+        assignee: "",
+        schedule_type: "one_time",
+        due_at: "",
+        interval_days: "",
+      };
+
+      await this.loadChores();
+
+      this._notice = `${name} added to HomeBase.`;
+    } catch (error) {
+      console.error("Unable to add HomeBase chore", error);
+      this._error = "Unable to add chore.";
+    }
+
+    this.render();
   }
 
   async completeChore(choreId) {
@@ -301,6 +417,16 @@ class HomeBasePanel extends HTMLElement {
           background: var(--primary-color);
         }
 
+        .header-actions {
+          display: flex;
+          gap: 10px;
+        }
+
+        .secondary-button {
+          color: var(--primary-text-color);
+          background: var(--card-background-color);
+        }
+
         .stats {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -404,6 +530,114 @@ class HomeBasePanel extends HTMLElement {
           cursor: default;
         }
 
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: rgba(0, 0, 0, 0.62);
+        }
+
+        .modal {
+          width: min(640px, 100%);
+          max-height: calc(100vh - 40px);
+          overflow-y: auto;
+          padding: 24px;
+          border-radius: 20px;
+          background: var(--card-background-color);
+          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 22px;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 24px;
+        }
+
+        .modal-header p {
+          margin: 6px 0 0;
+          color: var(--secondary-text-color);
+        }
+
+        .close-button {
+          padding: 7px 11px;
+          color: var(--secondary-text-color);
+          background: var(--secondary-background-color);
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .field-full {
+          grid-column: 1 / -1;
+        }
+
+        label {
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--secondary-text-color);
+        }
+
+        input,
+        textarea,
+        select {
+          width: 100%;
+          border: 1px solid var(--divider-color);
+          border-radius: 11px;
+          padding: 11px 12px;
+          outline: none;
+          font: inherit;
+          color: var(--primary-text-color);
+          background: var(--primary-background-color);
+        }
+
+        textarea {
+          min-height: 90px;
+          resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+          border-color: var(--primary-color);
+        }
+
+        .form-help {
+          margin: 0;
+          font-size: 12px;
+          color: var(--secondary-text-color);
+        }
+
+        .form-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 22px;
+        }
+
+        .hidden {
+          display: none;
+        }
+
         .status {
           flex: 0 0 auto;
           padding: 5px 9px;
@@ -448,6 +682,22 @@ class HomeBasePanel extends HTMLElement {
           .chore-title-row {
             align-items: flex-start;
           }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .field-full {
+            grid-column: auto;
+          }
+
+          .header-actions {
+            width: 100%;
+          }
+
+          .header-actions button {
+            flex: 1;
+          }
         }
       </style>
 
@@ -461,7 +711,15 @@ class HomeBasePanel extends HTMLElement {
             </p>
           </div>
 
-          <button id="refresh-button">Refresh</button>
+          <div class="header-actions">
+            <button class="secondary-button" id="refresh-button">
+              Refresh
+            </button>
+
+            <button id="add-chore-button">
+              + Add Chore
+            </button>
+          </div>
         </header>
 
         ${
@@ -526,12 +784,221 @@ class HomeBasePanel extends HTMLElement {
                 </section>
               `
         }
+        ${
+          this._showAddChore
+            ? `
+              <div class="modal-backdrop">
+                <div class="modal">
+                  <div class="modal-header">
+                    <div>
+                      <h2>Add Chore</h2>
+                      <p>Create a new HomeBase chore.</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="close-button"
+                      id="close-add-chore"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <form id="add-chore-form">
+                    <div class="form-grid">
+                      <div class="field field-full">
+                        <label for="chore-name">Name</label>
+                        <input
+                          id="chore-name"
+                          name="name"
+                          type="text"
+                          required
+                          autofocus
+                          placeholder="e.g. Clean Bathroom"
+                          value="${this.escapeHtml(this._addChoreDraft.name)}"
+                        />
+                      </div>
+
+                      <div class="field field-full">
+                        <label for="chore-description">
+                          Description
+                        </label>
+                        <textarea
+                          id="chore-description"
+                          name="description"
+                          placeholder="Optional details"
+                        >${this.escapeHtml(this._addChoreDraft.description)}</textarea>
+                      </div>
+
+                      <div class="field">
+                        <label for="chore-area">Area</label>
+                        <input
+                          id="chore-area"
+                          name="area"
+                          type="text"
+                          placeholder="e.g. Master Bedroom"
+                          value="${this.escapeHtml(this._addChoreDraft.area)}"
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label for="chore-assignee">
+                          Assignee
+                        </label>
+                        <input
+                          id="chore-assignee"
+                          name="assignee"
+                          type="text"
+                          placeholder="e.g. Tom"
+                          value="${this.escapeHtml(this._addChoreDraft.assignee)}"
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label for="chore-schedule">
+                          Schedule type
+                        </label>
+                        <select
+                          id="chore-schedule"
+                          name="schedule_type"
+                        >
+                          <option
+                            value="one_time"
+                            ${this._addChoreDraft.schedule_type === "one_time" ? "selected" : ""}
+                          >
+                            One time
+                          </option>
+                          <option
+                            value="fixed"
+                            ${this._addChoreDraft.schedule_type === "fixed" ? "selected" : ""}
+                          >
+                            Fixed cycle
+                          </option>
+                          <option
+                            value="relative"
+                            ${this._addChoreDraft.schedule_type === "relative" ? "selected" : ""}
+                          >
+                            After completion
+                          </option>
+                        </select>
+                      </div>
+
+                      <div class="field">
+                        <label for="chore-due">
+                          First due
+                        </label>
+                        <input
+                          id="chore-due"
+                          name="due_at"
+                          type="datetime-local"
+                          value="${this.escapeHtml(this._addChoreDraft.due_at)}"
+                        />
+                      </div>
+
+                      <div
+                        class="field field-full hidden"
+                        id="repeat-field"
+                      >
+                        <label for="chore-interval">
+                          Repeat every
+                        </label>
+
+                        <input
+                          id="chore-interval"
+                          name="interval_days"
+                          type="number"
+                          min="1"
+                          max="3650"
+                          step="1"
+                          placeholder="7"
+                          value="${this.escapeHtml(this._addChoreDraft.interval_days)}"
+                        />
+
+                        <p class="form-help">
+                          Number of days between occurrences.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="form-actions">
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        id="cancel-add-chore"
+                      >
+                        Cancel
+                      </button>
+
+                      <button type="submit">
+                        Add Chore
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            `
+            : ""
+        }
       </main>
     `;
 
     this.shadowRoot
       .querySelector("#refresh-button")
       ?.addEventListener("click", () => this.loadChores());
+
+
+    this.shadowRoot
+      .querySelector("#add-chore-button")
+      ?.addEventListener("click", () => {
+        this._showAddChore = true;
+        this.render();
+      });
+
+
+    const closeAddChore = () => {
+      this._showAddChore = false;
+      this._error = null;
+      this.render();
+    };
+
+    this.shadowRoot
+      .querySelector("#close-add-chore")
+      ?.addEventListener("click", closeAddChore);
+
+    this.shadowRoot
+      .querySelector("#cancel-add-chore")
+      ?.addEventListener("click", closeAddChore);
+
+    const scheduleSelect =
+      this.shadowRoot.querySelector("#chore-schedule");
+
+    const repeatField =
+      this.shadowRoot.querySelector("#repeat-field");
+
+    const updateRepeatVisibility = () => {
+      if (!scheduleSelect || !repeatField) {
+        return;
+      }
+
+      repeatField.classList.toggle(
+        "hidden",
+        scheduleSelect.value === "one_time"
+      );
+    };
+
+    scheduleSelect?.addEventListener(
+      "change",
+      updateRepeatVisibility
+    );
+
+    updateRepeatVisibility();
+
+    this.shadowRoot
+      .querySelector("#add-chore-form")
+      ?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await this.addChore(event.currentTarget);
+      });
 
 
     this.shadowRoot
