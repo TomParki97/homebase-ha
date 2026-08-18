@@ -7,5 +7,12 @@
         "description": "Set up HomeBase to start managing your home."
       }
     }
+  },
+  "entity": {
+    "todo": {
+      "chores": {
+        "name": "HomeBase chores"
+      }
+    }
   }
 }

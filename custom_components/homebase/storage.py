@@ -1,8 +1,9 @@
 """Persistent storage for HomeBase."""
 
+from collections.abc import Callable
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .const import STORAGE_KEY, STORAGE_VERSION
@@ -20,11 +21,33 @@ class HomeBaseStorage:
             STORAGE_KEY,
         )
         self._chores: dict[str, Chore] = {}
+        self._listeners: set[Callable[[], None]] = set()
 
     @property
     def chores(self) -> list[Chore]:
         """Return all chores."""
         return list(self._chores.values())
+
+    @callback
+    def async_add_listener(
+        self,
+        listener: Callable[[], None],
+    ) -> Callable[[], None]:
+        """Subscribe to HomeBase storage changes."""
+        self._listeners.add(listener)
+
+        @callback
+        def remove_listener() -> None:
+            """Remove a HomeBase storage listener."""
+            self._listeners.discard(listener)
+
+        return remove_listener
+
+    @callback
+    def _async_notify_listeners(self) -> None:
+        """Notify listeners that HomeBase data changed."""
+        for listener in tuple(self._listeners):
+            listener()
 
     async def async_load(self) -> None:
         """Load chores from Home Assistant storage."""
@@ -49,6 +72,8 @@ class HomeBaseStorage:
                 ]
             }
         )
+
+        self._async_notify_listeners()
 
     def get_chore(self, chore_id: str) -> Chore | None:
         """Return a chore by ID."""
