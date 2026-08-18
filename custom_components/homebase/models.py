@@ -87,6 +87,9 @@ class Chore:
     last_completed_at: datetime | None = None
     completion_history: list[ChoreCompletion] = field(default_factory=list)
 
+    due_reminder_sent_for: datetime | None = None
+    overdue_reminder_sent_for: datetime | None = None
+
     def status_at(self, now: datetime) -> ChoreStatus:
         """Return the chore status at a specific time."""
         if self.paused:
@@ -186,6 +189,16 @@ class Chore:
                 completion.to_dict()
                 for completion in self.completion_history
             ],
+            "due_reminder_sent_for": (
+                self.due_reminder_sent_for.isoformat()
+                if self.due_reminder_sent_for
+                else None
+            ),
+            "overdue_reminder_sent_for": (
+                self.overdue_reminder_sent_for.isoformat()
+                if self.overdue_reminder_sent_for
+                else None
+            ),
         }
 
     @classmethod
@@ -224,4 +237,10 @@ class Chore:
                 ChoreCompletion.from_dict(completion)
                 for completion in data.get("completion_history", [])
             ],
+            due_reminder_sent_for=datetime_from_storage(
+                data.get("due_reminder_sent_for")
+            ),
+            overdue_reminder_sent_for=datetime_from_storage(
+                data.get("overdue_reminder_sent_for")
+            ),
         )
