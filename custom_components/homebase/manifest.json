@@ -12,5 +12,7 @@
   "issue_tracker": "https://github.com/TomParki97/homebase-ha/issues",
   "codeowners": [
     "@TomParki97"
-  ]
+  ],
+  "integration_type": "helper",
+  "iot_class": "calculated"
 }
