@@ -18,7 +18,7 @@ type HomeBaseConfigEntry = ConfigEntry[HomeBaseStorage]
 PLATFORMS: list[Platform] = [Platform.TODO]
 
 PANEL_URL = "/homebase_static"
-PANEL_VERSION = "0.1.4"
+PANEL_VERSION = "0.1.5"
 PANEL_PATH = Path(__file__).parent / "frontend"
 
 

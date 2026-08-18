@@ -11,6 +11,7 @@ class HomeBasePanel extends HTMLElement {
     this._notice = null;
     this._completingChoreId = null;
     this._showAddChore = false;
+    this._selectedChoreId = null;
     this._addChoreDraft = {
       name: "",
       description: "",
@@ -281,6 +282,17 @@ class HomeBasePanel extends HTMLElement {
     }
   }
 
+  scheduleLabel(scheduleType) {
+    switch (scheduleType) {
+      case "fixed":
+        return "Fixed cycle";
+      case "relative":
+        return "After completion";
+      default:
+        return "One time";
+    }
+  }
+
   renderChore(chore) {
     const meta = [
       chore.area,
@@ -294,7 +306,10 @@ class HomeBasePanel extends HTMLElement {
       .join(" · ");
 
     return `
-      <article class="chore">
+      <article
+        class="chore chore-open"
+        data-chore-id="${this.escapeHtml(chore.chore_id)}"
+      >
         <div class="chore-main">
           <div class="chore-title-row">
             <h3>${this.escapeHtml(chore.name)}</h3>
@@ -412,6 +427,14 @@ class HomeBasePanel extends HTMLElement {
     const paused = this._chores.filter(
       (chore) => chore.status === "paused"
     );
+
+
+    const selectedChore = this._selectedChoreId
+      ? this._chores.find(
+          (chore) =>
+            chore.chore_id === this._selectedChoreId
+        )
+      : null;
 
     const dueToday = this._chores.filter(
       (chore) => chore.status === "due_today"
@@ -622,6 +645,79 @@ class HomeBasePanel extends HTMLElement {
           gap: 10px;
         }
 
+
+        .chore-open {
+          cursor: pointer;
+          transition:
+            transform 120ms ease,
+            box-shadow 120ms ease;
+        }
+
+        .chore-open:hover {
+          transform: translateY(-1px);
+        }
+
+        .detail-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+          margin-top: 20px;
+        }
+
+        .detail-item {
+          padding: 14px 16px;
+          border-radius: 12px;
+          background: var(--secondary-background-color);
+        }
+
+        .detail-item-full {
+          grid-column: 1 / -1;
+        }
+
+        .detail-label {
+          margin: 0 0 5px;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: var(--secondary-text-color);
+        }
+
+        .detail-value {
+          margin: 0;
+          font-size: 14px;
+          color: var(--primary-text-color);
+        }
+
+        .history-heading {
+          margin: 24px 0 12px;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--secondary-text-color);
+        }
+
+        .history-list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .history-item {
+          padding: 13px 15px;
+          border-radius: 12px;
+          background: var(--secondary-background-color);
+        }
+
+        .history-item p {
+          margin: 0;
+        }
+
+        .history-meta {
+          margin-top: 5px !important;
+          font-size: 12px;
+          color: var(--secondary-text-color);
+        }
+
         .complete-button {
           padding: 7px 11px;
           border-radius: 10px;
@@ -828,6 +924,15 @@ class HomeBasePanel extends HTMLElement {
             grid-template-columns: 1fr;
           }
 
+
+          .detail-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .detail-item-full {
+            grid-column: auto;
+          }
+
           .field-full {
             grid-column: auto;
           }
@@ -994,6 +1099,181 @@ class HomeBasePanel extends HTMLElement {
                 </section>
               `
         }
+        ${
+          selectedChore
+            ? `
+              <div class="modal-backdrop">
+                <div class="modal">
+                  <div class="modal-header">
+                    <div>
+                      <h2>
+                        ${this.escapeHtml(selectedChore.name)}
+                      </h2>
+
+                      <p>
+                        <span
+                          class="status status-${selectedChore.status}"
+                        >
+                          ${this.statusLabel(selectedChore.status)}
+                        </span>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="close-button"
+                      id="close-chore-detail"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  ${
+                    selectedChore.description
+                      ? `
+                        <p class="description">
+                          ${this.escapeHtml(
+                            selectedChore.description
+                          )}
+                        </p>
+                      `
+                      : ""
+                  }
+
+                  <div class="detail-grid">
+                    <div class="detail-item">
+                      <p class="detail-label">Area</p>
+                      <p class="detail-value">
+                        ${this.escapeHtml(
+                          selectedChore.area || "Not assigned"
+                        )}
+                      </p>
+                    </div>
+
+                    <div class="detail-item">
+                      <p class="detail-label">Assignee</p>
+                      <p class="detail-value">
+                        ${this.escapeHtml(
+                          selectedChore.assignee || "Not assigned"
+                        )}
+                      </p>
+                    </div>
+
+                    <div class="detail-item">
+                      <p class="detail-label">Schedule</p>
+                      <p class="detail-value">
+                        ${this.escapeHtml(
+                          this.scheduleLabel(
+                            selectedChore.schedule_type
+                          )
+                        )}
+                      </p>
+                    </div>
+
+                    <div class="detail-item">
+                      <p class="detail-label">Repeat</p>
+                      <p class="detail-value">
+                        ${
+                          selectedChore.interval_days
+                            ? `Every ${selectedChore.interval_days} days`
+                            : "Does not repeat"
+                        }
+                      </p>
+                    </div>
+
+                    <div class="detail-item">
+                      <p class="detail-label">Due</p>
+                      <p class="detail-value">
+                        ${
+                          selectedChore.due_at
+                            ? this.formatDate(
+                                selectedChore.due_at
+                              )
+                            : "No due date"
+                        }
+                      </p>
+                    </div>
+
+                    <div class="detail-item">
+                      <p class="detail-label">
+                        Last completed
+                      </p>
+                      <p class="detail-value">
+                        ${
+                          selectedChore.last_completed_at
+                            ? this.formatDate(
+                                selectedChore.last_completed_at
+                              )
+                            : "Never"
+                        }
+                      </p>
+                    </div>
+
+                    <div class="detail-item detail-item-full">
+                      <p class="detail-label">
+                        Total completions
+                      </p>
+                      <p class="detail-value">
+                        ${
+                          selectedChore.completion_history
+                            ?.length || 0
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <h3 class="history-heading">
+                    Completion History
+                  </h3>
+
+                  <div class="history-list">
+                    ${
+                      selectedChore.completion_history?.length
+                        ? [
+                            ...selectedChore.completion_history,
+                          ]
+                            .reverse()
+                            .map(
+                              (completion) => `
+                                <div class="history-item">
+                                  <p>
+                                    ✓ Completed
+                                    ${this.formatDate(
+                                      completion.completed_at
+                                    )}
+                                  </p>
+
+                                  <p class="history-meta">
+                                    ${[
+                                      completion.completed_by
+                                        ? `By ${completion.completed_by}`
+                                        : null,
+                                      completion.note || null,
+                                    ]
+                                      .filter(Boolean)
+                                      .map((value) =>
+                                        this.escapeHtml(value)
+                                      )
+                                      .join(" · ") ||
+                                    "No additional details"}
+                                  </p>
+                                </div>
+                              `
+                            )
+                            .join("")
+                        : `
+                          <div class="empty">
+                            No completions recorded yet.
+                          </div>
+                        `
+                    }
+                  </div>
+                </div>
+              </div>
+            `
+            : ""
+        }
+
         ${
           this._showAddChore
             ? `
@@ -1214,7 +1494,8 @@ class HomeBasePanel extends HTMLElement {
     this.shadowRoot
       .querySelectorAll(".complete-button")
       .forEach((button) => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
           this.completeChore(button.dataset.choreId);
         });
       });
@@ -1223,12 +1504,30 @@ class HomeBasePanel extends HTMLElement {
     this.shadowRoot
       .querySelectorAll(".pause-button")
       .forEach((button) => {
-        button.addEventListener("click", () => {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
           this.setChorePaused(
             button.dataset.choreId,
             button.dataset.paused === "true"
           );
         });
+      });
+
+
+    this.shadowRoot
+      .querySelectorAll(".chore-open")
+      .forEach((card) => {
+        card.addEventListener("click", () => {
+          this._selectedChoreId = card.dataset.choreId;
+          this.render();
+        });
+      });
+
+    this.shadowRoot
+      .querySelector("#close-chore-detail")
+      ?.addEventListener("click", () => {
+        this._selectedChoreId = null;
+        this.render();
       });
   }
 }
