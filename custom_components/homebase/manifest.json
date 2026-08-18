@@ -3,5 +3,9 @@
   "name": "HomeBase",
   "version": "0.1.0",
   "config_flow": true,
-  "single_config_entry": true
+  "single_config_entry": true,
+  "dependencies": [
+    "http",
+    "panel_custom"
+  ]
 }
