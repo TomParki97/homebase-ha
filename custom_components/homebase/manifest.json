@@ -1,18 +1,18 @@
 {
   "domain": "homebase",
   "name": "HomeBase",
-  "version": "0.1.0-beta.1",
+  "codeowners": [
+    "@TomParki97"
+  ],
   "config_flow": true,
-  "single_config_entry": true,
   "dependencies": [
     "http",
     "panel_custom"
   ],
   "documentation": "https://github.com/TomParki97/homebase-ha#readme",
-  "issue_tracker": "https://github.com/TomParki97/homebase-ha/issues",
-  "codeowners": [
-    "@TomParki97"
-  ],
   "integration_type": "helper",
-  "iot_class": "calculated"
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/TomParki97/homebase-ha/issues",
+  "single_config_entry": true,
+  "version": "0.1.0-beta.1"
 }
