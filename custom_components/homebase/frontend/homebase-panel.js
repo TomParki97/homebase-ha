@@ -8,6 +8,8 @@ class HomeBasePanel extends HTMLElement {
     this._loading = true;
     this._error = null;
     this._chores = [];
+    this._notice = null;
+    this._completingChoreId = null;
   }
 
   set hass(value) {
@@ -79,6 +81,53 @@ class HomeBasePanel extends HTMLElement {
     return labels[status] || status;
   }
 
+  async completeChore(choreId) {
+    if (!this._hass || this._completingChoreId) {
+      return;
+    }
+
+    const chore = this._chores.find(
+      (item) => item.chore_id === choreId
+    );
+
+    this._completingChoreId = choreId;
+    this._notice = null;
+    this._error = null;
+    this.render();
+
+    try {
+      await this._hass.callService(
+        "homebase",
+        "complete_chore",
+        {
+          chore_id: choreId,
+          note: "Completed from HomeBase",
+        }
+      );
+
+      await this.loadChores();
+
+      const updated = this._chores.find(
+        (item) => item.chore_id === choreId
+      );
+
+      if (updated && updated.status !== "completed") {
+        this._notice =
+          `${chore?.name || "Chore"} completed. ` +
+          `Next due ${this.formatDate(updated.due_at)}.`;
+      } else {
+        this._notice =
+          `${chore?.name || "Chore"} completed.`;
+      }
+    } catch (error) {
+      console.error("Unable to complete HomeBase chore", error);
+      this._error = "Unable to complete chore.";
+    } finally {
+      this._completingChoreId = null;
+      this.render();
+    }
+  }
+
   renderChore(chore) {
     const meta = [
       chore.area,
@@ -96,9 +145,35 @@ class HomeBasePanel extends HTMLElement {
         <div class="chore-main">
           <div class="chore-title-row">
             <h3>${this.escapeHtml(chore.name)}</h3>
-            <span class="status status-${chore.status}">
-              ${this.statusLabel(chore.status)}
-            </span>
+
+            <div class="chore-actions">
+              <span class="status status-${chore.status}">
+                ${this.statusLabel(chore.status)}
+              </span>
+
+              ${
+                chore.status !== "completed" &&
+                chore.status !== "paused"
+                  ? `
+                    <button
+                      class="complete-button"
+                      data-chore-id="${this.escapeHtml(chore.chore_id)}"
+                      ${
+                        this._completingChoreId === chore.chore_id
+                          ? "disabled"
+                          : ""
+                      }
+                    >
+                      ${
+                        this._completingChoreId === chore.chore_id
+                          ? "Completing…"
+                          : "Complete"
+                      }
+                    </button>
+                  `
+                  : ""
+              }
+            </div>
           </div>
 
           ${
@@ -112,6 +187,24 @@ class HomeBasePanel extends HTMLElement {
           ${
             meta
               ? `<p class="meta">${this.escapeHtml(meta)}</p>`
+              : ""
+          }
+
+          ${
+            chore.last_completed_at &&
+            chore.status !== "completed"
+              ? `
+                <p class="last-completed">
+                  Last completed ${this.formatDate(
+                    chore.last_completed_at
+                  )}
+                  ${
+                    chore.completion_history?.length
+                      ? ` · ${chore.completion_history.length} completions`
+                      : ""
+                  }
+                </p>
+              `
               : ""
           }
         </div>
@@ -264,6 +357,18 @@ class HomeBasePanel extends HTMLElement {
           gap: 16px;
         }
 
+        .chore-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .complete-button {
+          padding: 7px 11px;
+          border-radius: 10px;
+          font-size: 13px;
+        }
+
         h3 {
           margin: 0;
           font-size: 18px;
@@ -278,6 +383,25 @@ class HomeBasePanel extends HTMLElement {
           margin: 9px 0 0;
           color: var(--secondary-text-color);
           font-size: 14px;
+        }
+
+        .last-completed {
+          margin: 7px 0 0;
+          color: var(--secondary-text-color);
+          font-size: 13px;
+        }
+
+        .notice {
+          margin-bottom: 20px;
+          padding: 13px 16px;
+          border-radius: 12px;
+          background: var(--card-background-color);
+          border-left: 4px solid var(--success-color, var(--primary-color));
+        }
+
+        .complete-button:disabled {
+          opacity: 0.65;
+          cursor: default;
         }
 
         .status {
@@ -339,6 +463,12 @@ class HomeBasePanel extends HTMLElement {
 
           <button id="refresh-button">Refresh</button>
         </header>
+
+        ${
+          this._notice
+            ? `<div class="notice">${this.escapeHtml(this._notice)}</div>`
+            : ""
+        }
 
         <div class="stats">
           <div class="stat">
@@ -402,6 +532,15 @@ class HomeBasePanel extends HTMLElement {
     this.shadowRoot
       .querySelector("#refresh-button")
       ?.addEventListener("click", () => this.loadChores());
+
+
+    this.shadowRoot
+      .querySelectorAll(".complete-button")
+      .forEach((button) => {
+        button.addEventListener("click", () => {
+          this.completeChore(button.dataset.choreId);
+        });
+      });
   }
 }
 

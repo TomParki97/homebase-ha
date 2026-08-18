@@ -18,6 +18,7 @@ type HomeBaseConfigEntry = ConfigEntry[HomeBaseStorage]
 PLATFORMS: list[Platform] = [Platform.TODO]
 
 PANEL_URL = "/homebase_static"
+PANEL_VERSION = "0.1.1"
 PANEL_PATH = Path(__file__).parent / "frontend"
 
 
@@ -42,7 +43,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         webcomponent_name="homebase-panel",
         sidebar_title="HomeBase",
         sidebar_icon="mdi:home-heart",
-        module_url=f"{PANEL_URL}/homebase-panel.js",
+        module_url=f"{PANEL_URL}/homebase-panel.js?v={PANEL_VERSION}",
     )
 
     return True
