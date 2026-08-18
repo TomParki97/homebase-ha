@@ -58,9 +58,61 @@ def websocket_list_chores(
     )
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "homebase/chores/set_paused",
+        vol.Required("chore_id"): str,
+        vol.Required("paused"): bool,
+    }
+)
+@websocket_api.async_response
+async def websocket_set_chore_paused(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Pause or resume a HomeBase chore."""
+    storage = _get_storage(hass)
+
+    if storage is None:
+        connection.send_error(
+            msg["id"],
+            "homebase_not_configured",
+            "HomeBase is not configured",
+        )
+        return
+
+    chore = storage.get_chore(msg["chore_id"])
+
+    if chore is None:
+        connection.send_error(
+            msg["id"],
+            "chore_not_found",
+            "HomeBase chore was not found",
+        )
+        return
+
+    chore.paused = msg["paused"]
+    await storage.async_save()
+
+    data = chore.to_dict()
+    data["status"] = chore.status_at(dt_util.now()).value
+
+    connection.send_result(
+        msg["id"],
+        {
+            "chore": data,
+        },
+    )
+
+
 def async_register_websocket_api(hass: HomeAssistant) -> None:
     """Register the HomeBase WebSocket API."""
     websocket_api.async_register_command(
         hass,
         websocket_list_chores,
+    )
+    websocket_api.async_register_command(
+        hass,
+        websocket_set_chore_paused,
     )

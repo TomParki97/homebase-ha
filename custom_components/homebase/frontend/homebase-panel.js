@@ -197,6 +197,43 @@ class HomeBasePanel extends HTMLElement {
     this.render();
   }
 
+  async setChorePaused(choreId, paused) {
+    if (!this._hass) {
+      return;
+    }
+
+    const chore = this._chores.find(
+      (item) => item.chore_id === choreId
+    );
+
+    this._error = null;
+    this._notice = null;
+
+    try {
+      await this._hass.connection.sendMessagePromise({
+        type: "homebase/chores/set_paused",
+        chore_id: choreId,
+        paused,
+      });
+
+      await this.loadChores();
+
+      this._notice = paused
+        ? `${chore?.name || "Chore"} paused.`
+        : `${chore?.name || "Chore"} resumed.`;
+    } catch (error) {
+      console.error(
+        "Unable to update HomeBase chore pause state",
+        error
+      );
+      this._error = paused
+        ? "Unable to pause chore."
+        : "Unable to resume chore.";
+    }
+
+    this.render();
+  }
+
   async completeChore(choreId) {
     if (!this._hass || this._completingChoreId) {
       return;
@@ -289,6 +326,28 @@ class HomeBasePanel extends HTMLElement {
                   `
                   : ""
               }
+
+              ${
+                chore.status !== "completed"
+                  ? `
+                    <button
+                      class="pause-button"
+                      data-chore-id="${this.escapeHtml(chore.chore_id)}"
+                      data-paused="${
+                        chore.status === "paused"
+                          ? "false"
+                          : "true"
+                      }"
+                    >
+                      ${
+                        chore.status === "paused"
+                          ? "Resume"
+                          : "Pause"
+                      }
+                    </button>
+                  `
+                  : ""
+              }
             </div>
           </div>
 
@@ -347,6 +406,11 @@ class HomeBasePanel extends HTMLElement {
 
     const completed = this._chores.filter(
       (chore) => chore.status === "completed"
+    );
+
+
+    const paused = this._chores.filter(
+      (chore) => chore.status === "paused"
     );
 
     const dueToday = this._chores.filter(
@@ -562,6 +626,14 @@ class HomeBasePanel extends HTMLElement {
           padding: 7px 11px;
           border-radius: 10px;
           font-size: 13px;
+        }
+
+        .pause-button {
+          padding: 7px 11px;
+          border-radius: 10px;
+          font-size: 13px;
+          color: var(--primary-text-color);
+          background: var(--secondary-background-color);
         }
 
         h3 {
@@ -835,6 +907,24 @@ class HomeBasePanel extends HTMLElement {
                     }
                   </div>
                 </section>
+
+                ${
+                  paused.length
+                    ? `
+                      <section>
+                        <h2 class="section-title">Paused</h2>
+
+                        <div class="chore-list">
+                          ${paused
+                            .map((chore) =>
+                              this.renderChore(chore)
+                            )
+                            .join("")}
+                        </div>
+                      </section>
+                    `
+                    : ""
+                }
 
                 ${
                   recentActivity.length
@@ -1126,6 +1216,18 @@ class HomeBasePanel extends HTMLElement {
       .forEach((button) => {
         button.addEventListener("click", () => {
           this.completeChore(button.dataset.choreId);
+        });
+      });
+
+
+    this.shadowRoot
+      .querySelectorAll(".pause-button")
+      .forEach((button) => {
+        button.addEventListener("click", () => {
+          this.setChorePaused(
+            button.dataset.choreId,
+            button.dataset.paused === "true"
+          );
         });
       });
   }
