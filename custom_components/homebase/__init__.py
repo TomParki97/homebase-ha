@@ -39,7 +39,7 @@ PLATFORMS: list[Platform] = [
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 PANEL_URL = "/homebase_static"
-PANEL_VERSION = "0.1.7"
+PANEL_VERSION = "0.1.8"
 PANEL_PATH = Path(__file__).parent / "frontend"
 
 
