@@ -1,0 +1,95 @@
+add_chore:
+  name: Add chore
+  description: Add a new chore to HomeBase.
+  fields:
+    name:
+      name: Name
+      description: Name of the chore.
+      required: true
+      selector:
+        text:
+
+    description:
+      name: Description
+      description: Optional details about the chore.
+      selector:
+        text:
+          multiline: true
+
+    area:
+      name: Area
+      description: Area of the home associated with the chore.
+      selector:
+        text:
+
+    assignee:
+      name: Assignee
+      description: Person responsible for the chore.
+      selector:
+        text:
+
+    schedule_type:
+      name: Schedule type
+      description: How HomeBase should schedule this chore.
+      default: one_time
+      selector:
+        select:
+          options:
+            - label: One time
+              value: one_time
+            - label: Fixed cycle
+              value: fixed
+            - label: After completion
+              value: relative
+
+    due_at:
+      name: First due
+      description: When the chore is first due.
+      selector:
+        datetime:
+
+    interval_days:
+      name: Repeat every
+      description: Number of days between recurring chores.
+      selector:
+        number:
+          min: 1
+          max: 3650
+          step: 1
+          mode: box
+          unit_of_measurement: days
+
+complete_chore:
+  name: Complete chore
+  description: Mark a HomeBase chore as completed.
+  fields:
+    chore_id:
+      name: Chore ID
+      description: Unique ID of the chore to complete.
+      required: true
+      selector:
+        text:
+
+    completed_by:
+      name: Completed by
+      description: Person who completed the chore.
+      selector:
+        text:
+
+    note:
+      name: Note
+      description: Optional note about this completion.
+      selector:
+        text:
+          multiline: true
+
+remove_chore:
+  name: Remove chore
+  description: Permanently remove a chore from HomeBase.
+  fields:
+    chore_id:
+      name: Chore ID
+      description: Unique ID of the chore to remove.
+      required: true
+      selector:
+        text:
