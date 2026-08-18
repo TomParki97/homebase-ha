@@ -12,6 +12,7 @@ class HomeBasePanel extends HTMLElement {
     this._completingChoreId = null;
     this._showAddChore = false;
     this._selectedChoreId = null;
+    this._editingChoreId = null;
     this._addChoreDraft = {
       name: "",
       description: "",
@@ -90,6 +91,41 @@ class HomeBasePanel extends HTMLElement {
     };
 
     return labels[status] || status;
+  }
+
+  toDateTimeLocal(value) {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+    const offset = date.getTimezoneOffset() * 60000;
+
+    return new Date(date.getTime() - offset)
+      .toISOString()
+      .slice(0, 16);
+  }
+
+  openEditChore(chore) {
+    this._editingChoreId = chore.chore_id;
+
+    this._addChoreDraft = {
+      name: chore.name || "",
+      description: chore.description || "",
+      area: chore.area || "",
+      assignee: chore.assignee || "",
+      schedule_type: chore.schedule_type || "one_time",
+      due_at: this.toDateTimeLocal(chore.due_at),
+      interval_days:
+        chore.interval_days !== null &&
+        chore.interval_days !== undefined
+          ? String(chore.interval_days)
+          : "",
+    };
+
+    this._error = null;
+    this._showAddChore = true;
+    this.render();
   }
 
   async addChore(form) {
@@ -193,6 +229,111 @@ class HomeBasePanel extends HTMLElement {
     } catch (error) {
       console.error("Unable to add HomeBase chore", error);
       this._error = "Unable to add chore.";
+    }
+
+    this.render();
+  }
+
+  async updateChore(form) {
+    if (!this._hass || !this._editingChoreId) {
+      return;
+    }
+
+    const formData = new FormData(form);
+
+    this._addChoreDraft = {
+      name: String(formData.get("name") || ""),
+      description: String(formData.get("description") || ""),
+      area: String(formData.get("area") || ""),
+      assignee: String(formData.get("assignee") || ""),
+      schedule_type: String(
+        formData.get("schedule_type") || "one_time"
+      ),
+      due_at: String(formData.get("due_at") || ""),
+      interval_days: String(
+        formData.get("interval_days") || ""
+      ),
+    };
+
+    const name = this._addChoreDraft.name.trim();
+    const description =
+      this._addChoreDraft.description.trim();
+    const area = this._addChoreDraft.area.trim();
+    const assignee =
+      this._addChoreDraft.assignee.trim();
+    const scheduleType =
+      this._addChoreDraft.schedule_type;
+    const dueValue =
+      this._addChoreDraft.due_at.trim();
+    const intervalValue =
+      this._addChoreDraft.interval_days.trim();
+
+    if (!name) {
+      this._error = "Chore name is required.";
+      this.render();
+      return;
+    }
+
+    if (
+      scheduleType !== "one_time" &&
+      !intervalValue
+    ) {
+      this._error =
+        "Repeat every is required for recurring chores.";
+      this.render();
+      return;
+    }
+
+    const choreId = this._editingChoreId;
+
+    const message = {
+      type: "homebase/chores/update",
+      chore_id: choreId,
+      name,
+      description,
+      area: area || null,
+      assignee: assignee || null,
+      schedule_type: scheduleType,
+      due_at: dueValue
+        ? new Date(dueValue).toISOString()
+        : null,
+      interval_days:
+        scheduleType === "one_time"
+          ? null
+          : Number(intervalValue),
+    };
+
+    this._error = null;
+    this._notice = null;
+
+    try {
+      await this._hass.connection.sendMessagePromise(
+        message
+      );
+
+      this._showAddChore = false;
+      this._editingChoreId = null;
+
+      this._addChoreDraft = {
+        name: "",
+        description: "",
+        area: "",
+        assignee: "",
+        schedule_type: "one_time",
+        due_at: "",
+        interval_days: "",
+      };
+
+      await this.loadChores();
+
+      this._selectedChoreId = choreId;
+      this._notice = `${name} updated.`;
+    } catch (error) {
+      console.error(
+        "Unable to update HomeBase chore",
+        error
+      );
+      this._error = "Unable to update chore.";
     }
 
     this.render();
@@ -1100,7 +1241,7 @@ class HomeBasePanel extends HTMLElement {
               `
         }
         ${
-          selectedChore
+          selectedChore && !this._showAddChore
             ? `
               <div class="modal-backdrop">
                 <div class="modal">
@@ -1119,13 +1260,23 @@ class HomeBasePanel extends HTMLElement {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      class="close-button"
-                      id="close-chore-detail"
-                    >
-                      Close
-                    </button>
+                    <div style="display:flex; gap:8px;">
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        id="edit-chore-button"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        class="close-button"
+                        id="close-chore-detail"
+                      >
+                        Close
+                      </button>
+                    </div>
                   </div>
 
                   ${
@@ -1281,8 +1432,20 @@ class HomeBasePanel extends HTMLElement {
                 <div class="modal">
                   <div class="modal-header">
                     <div>
-                      <h2>Add Chore</h2>
-                      <p>Create a new HomeBase chore.</p>
+                      <h2>
+                        ${
+                          this._editingChoreId
+                            ? "Edit Chore"
+                            : "Add Chore"
+                        }
+                      </h2>
+                      <p>
+                        ${
+                          this._editingChoreId
+                            ? "Update this HomeBase chore."
+                            : "Create a new HomeBase chore."
+                        }
+                      </p>
                     </div>
 
                     <button
@@ -1375,7 +1538,11 @@ class HomeBasePanel extends HTMLElement {
 
                       <div class="field">
                         <label for="chore-due">
-                          First due
+                          ${
+                            this._editingChoreId
+                              ? "Due"
+                              : "First due"
+                          }
                         </label>
                         <input
                           id="chore-due"
@@ -1420,7 +1587,11 @@ class HomeBasePanel extends HTMLElement {
                       </button>
 
                       <button type="submit">
-                        Add Chore
+                        ${
+                          this._editingChoreId
+                            ? "Save Changes"
+                            : "Add Chore"
+                        }
                       </button>
                     </div>
                   </form>
@@ -1440,6 +1611,16 @@ class HomeBasePanel extends HTMLElement {
     this.shadowRoot
       .querySelector("#add-chore-button")
       ?.addEventListener("click", () => {
+        this._editingChoreId = null;
+        this._addChoreDraft = {
+          name: "",
+          description: "",
+          area: "",
+          assignee: "",
+          schedule_type: "one_time",
+          due_at: "",
+          interval_days: "",
+        };
         this._showAddChore = true;
         this.render();
       });
@@ -1447,6 +1628,7 @@ class HomeBasePanel extends HTMLElement {
 
     const closeAddChore = () => {
       this._showAddChore = false;
+      this._editingChoreId = null;
       this._error = null;
       this.render();
     };
@@ -1487,7 +1669,12 @@ class HomeBasePanel extends HTMLElement {
       .querySelector("#add-chore-form")
       ?.addEventListener("submit", async (event) => {
         event.preventDefault();
-        await this.addChore(event.currentTarget);
+
+        if (this._editingChoreId) {
+          await this.updateChore(event.currentTarget);
+        } else {
+          await this.addChore(event.currentTarget);
+        }
       });
 
 
@@ -1521,6 +1708,14 @@ class HomeBasePanel extends HTMLElement {
           this._selectedChoreId = card.dataset.choreId;
           this.render();
         });
+      });
+
+    this.shadowRoot
+      .querySelector("#edit-chore-button")
+      ?.addEventListener("click", () => {
+        if (selectedChore) {
+          this.openEditChore(selectedChore);
+        }
       });
 
     this.shadowRoot
