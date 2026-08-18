@@ -87,6 +87,35 @@ class Chore:
     last_completed_at: datetime | None = None
     completion_history: list[ChoreCompletion] = field(default_factory=list)
 
+    def status_at(self, now: datetime) -> ChoreStatus:
+        """Return the chore status at a specific time."""
+        if self.paused:
+            return ChoreStatus.PAUSED
+
+        if self.completed:
+            return ChoreStatus.COMPLETED
+
+        if self.due_at is None:
+            return ChoreStatus.UPCOMING
+
+        if now.tzinfo is None:
+            raise ValueError("Status time must be timezone-aware")
+
+        due_at = self.due_at
+
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+
+        due_local = due_at.astimezone(now.tzinfo)
+
+        if due_local.date() < now.date():
+            return ChoreStatus.OVERDUE
+
+        if due_local.date() == now.date():
+            return ChoreStatus.DUE_TODAY
+
+        return ChoreStatus.UPCOMING
+
     def complete(
         self,
         completed_by: str | None = None,
