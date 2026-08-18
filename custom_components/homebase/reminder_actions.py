@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.script import (
     Script,
@@ -84,9 +85,13 @@ async def async_run_reminder_action(
         return
 
     try:
+        script_sequence = cv.SCRIPT_SCHEMA(
+            deepcopy(sequence)
+        )
+
         validated_sequence = await async_validate_actions_config(
             hass,
-            deepcopy(sequence),
+            script_sequence,
         )
 
         action_script = Script(
