@@ -11,6 +11,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
+from .reminder_actions import async_setup_reminder_actions
 from .reminders import (
     REMINDER_CHECK_INTERVAL,
     async_check_chore_reminders,
@@ -71,6 +72,13 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(
         entry,
         PLATFORMS,
+    )
+
+    entry.async_on_unload(
+        async_setup_reminder_actions(
+            hass,
+            entry,
+        )
     )
 
     async def async_check_reminders(now) -> None:
