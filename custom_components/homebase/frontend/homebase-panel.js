@@ -13,6 +13,7 @@ class HomeBasePanel extends HTMLElement {
     this._showAddChore = false;
     this._selectedChoreId = null;
     this._editingChoreId = null;
+    this._confirmRemoveChoreId = null;
     this._addChoreDraft = {
       name: "",
       description: "",
@@ -334,6 +335,45 @@ class HomeBasePanel extends HTMLElement {
         error
       );
       this._error = "Unable to update chore.";
+    }
+
+    this.render();
+  }
+
+  async removeChore(choreId) {
+    if (!this._hass) {
+      return;
+    }
+
+    const chore = this._chores.find(
+      (item) => item.chore_id === choreId
+    );
+
+    this._error = null;
+    this._notice = null;
+
+    try {
+      await this._hass.callService(
+        "homebase",
+        "remove_chore",
+        {
+          chore_id: choreId,
+        }
+      );
+
+      this._confirmRemoveChoreId = null;
+      this._selectedChoreId = null;
+
+      await this.loadChores();
+
+      this._notice =
+        `${chore?.name || "Chore"} removed from HomeBase.`;
+    } catch (error) {
+      console.error(
+        "Unable to remove HomeBase chore",
+        error
+      );
+      this._error = "Unable to remove chore.";
     }
 
     this.render();
@@ -908,6 +948,50 @@ class HomeBasePanel extends HTMLElement {
           cursor: default;
         }
 
+
+        .danger-button {
+          padding: 7px 11px;
+          border-radius: 10px;
+          border: 1px solid var(--error-color);
+          background: transparent;
+          color: var(--error-color);
+        }
+
+        .danger-button:hover {
+          background: color-mix(
+            in srgb,
+            var(--error-color) 12%,
+            transparent
+          );
+        }
+
+        .danger-button-solid {
+          background: var(--error-color);
+          color: white;
+        }
+
+        .danger-button-solid:hover {
+          background: var(--error-color);
+          opacity: 0.9;
+        }
+
+        .confirmation-warning {
+          margin: 18px 0;
+          padding: 16px;
+          border-radius: 12px;
+          background: var(--secondary-background-color);
+        }
+
+        .confirmation-warning p {
+          margin: 0;
+        }
+
+        .confirmation-warning p + p {
+          margin-top: 8px;
+          color: var(--secondary-text-color);
+          font-size: 13px;
+        }
+
         .modal-backdrop {
           position: fixed;
           inset: 0;
@@ -1241,7 +1325,9 @@ class HomeBasePanel extends HTMLElement {
               `
         }
         ${
-          selectedChore && !this._showAddChore
+          selectedChore &&
+          !this._showAddChore &&
+          !this._confirmRemoveChoreId
             ? `
               <div class="modal-backdrop">
                 <div class="modal">
@@ -1267,6 +1353,14 @@ class HomeBasePanel extends HTMLElement {
                         id="edit-chore-button"
                       >
                         Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        class="danger-button"
+                        id="remove-chore-button"
+                      >
+                        Remove
                       </button>
 
                       <button
@@ -1418,6 +1512,64 @@ class HomeBasePanel extends HTMLElement {
                           </div>
                         `
                     }
+                  </div>
+                </div>
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          this._confirmRemoveChoreId && selectedChore
+            ? `
+              <div class="modal-backdrop">
+                <div class="modal">
+                  <div class="modal-header">
+                    <div>
+                      <h2>Remove Chore?</h2>
+                      <p>
+                        This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="confirmation-warning">
+                    <p>
+                      <strong>
+                        ${this.escapeHtml(selectedChore.name)}
+                      </strong>
+                    </p>
+
+                    <p>
+                      This will permanently remove the chore
+                      ${
+                        selectedChore.completion_history?.length
+                          ? `and its ${selectedChore.completion_history.length} recorded completion${
+                              selectedChore.completion_history.length === 1
+                                ? ""
+                                : "s"
+                            }.`
+                          : "from HomeBase."
+                      }
+                    </p>
+                  </div>
+
+                  <div class="form-actions">
+                    <button
+                      type="button"
+                      class="secondary-button"
+                      id="cancel-remove-chore"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      class="danger-button danger-button-solid"
+                      id="confirm-remove-chore"
+                    >
+                      Remove Chore
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1715,6 +1867,34 @@ class HomeBasePanel extends HTMLElement {
       ?.addEventListener("click", () => {
         if (selectedChore) {
           this.openEditChore(selectedChore);
+        }
+      });
+
+
+    this.shadowRoot
+      .querySelector("#remove-chore-button")
+      ?.addEventListener("click", () => {
+        if (selectedChore) {
+          this._confirmRemoveChoreId =
+            selectedChore.chore_id;
+          this.render();
+        }
+      });
+
+    this.shadowRoot
+      .querySelector("#cancel-remove-chore")
+      ?.addEventListener("click", () => {
+        this._confirmRemoveChoreId = null;
+        this.render();
+      });
+
+    this.shadowRoot
+      .querySelector("#confirm-remove-chore")
+      ?.addEventListener("click", async () => {
+        if (this._confirmRemoveChoreId) {
+          await this.removeChore(
+            this._confirmRemoveChoreId
+          );
         }
       });
 
