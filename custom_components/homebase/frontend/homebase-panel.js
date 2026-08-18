@@ -357,6 +357,29 @@ class HomeBasePanel extends HTMLElement {
       (chore) => chore.status === "overdue"
     ).length;
 
+
+    const recentActivity = this._chores
+      .filter((chore) => chore.last_completed_at)
+      .map((chore) => {
+        const history = chore.completion_history || [];
+
+        return {
+          chore,
+          completion:
+            history[history.length - 1] || {
+              completed_at: chore.last_completed_at,
+              completed_by: null,
+              note: "",
+            },
+        };
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.completion.completed_at) -
+          new Date(a.completion.completed_at)
+      )
+      .slice(0, 5);
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -467,6 +490,52 @@ class HomeBasePanel extends HTMLElement {
         .chore-list {
           display: grid;
           gap: 12px;
+        }
+
+
+        .activity-list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .activity-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 13px;
+          padding: 15px 18px;
+          border-radius: 14px;
+          background: var(--card-background-color);
+          box-shadow: var(--ha-card-box-shadow);
+        }
+
+        .activity-check {
+          flex: 0 0 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--success-color, var(--primary-color));
+          background: var(--secondary-background-color);
+        }
+
+        .activity-content {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .activity-title {
+          margin: 0;
+          font-weight: 700;
+        }
+
+        .activity-meta {
+          margin: 5px 0 0;
+          color: var(--secondary-text-color);
+          font-size: 13px;
         }
 
         .chore {
@@ -766,6 +835,57 @@ class HomeBasePanel extends HTMLElement {
                     }
                   </div>
                 </section>
+
+                ${
+                  recentActivity.length
+                    ? `
+                      <section>
+                        <h2 class="section-title">
+                          Recent Activity
+                        </h2>
+
+                        <div class="activity-list">
+                          ${recentActivity
+                            .map(({ chore, completion }) => {
+                              const details = [
+                                `Completed ${this.formatDate(
+                                  completion.completed_at
+                                )}`,
+                                completion.completed_by
+                                  ? `by ${completion.completed_by}`
+                                  : null,
+                                chore.status !== "completed" &&
+                                chore.due_at
+                                  ? `Next due ${this.formatDate(
+                                      chore.due_at
+                                    )}`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ");
+
+                              return `
+                                <div class="activity-item">
+                                  <div class="activity-check">✓</div>
+
+                                  <div class="activity-content">
+                                    <p class="activity-title">
+                                      ${this.escapeHtml(chore.name)}
+                                    </p>
+
+                                    <p class="activity-meta">
+                                      ${this.escapeHtml(details)}
+                                    </p>
+                                  </div>
+                                </div>
+                              `;
+                            })
+                            .join("")}
+                        </div>
+                      </section>
+                    `
+                    : ""
+                }
 
                 <section>
                   <h2 class="section-title">Completed</h2>
