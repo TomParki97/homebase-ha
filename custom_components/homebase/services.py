@@ -1,14 +1,17 @@
 """Service actions for HomeBase."""
 
+from datetime import timedelta
+
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .models import Chore
+from .models import Chore, ScheduleType, utc_now
 from .storage import HomeBaseStorage
 
 SERVICE_ADD_CHORE = "add_chore"
@@ -21,6 +24,15 @@ ADD_CHORE_SCHEMA = vol.Schema(
         vol.Optional("description", default=""): cv.string,
         vol.Optional("area"): cv.string,
         vol.Optional("assignee"): cv.string,
+        vol.Optional(
+            "schedule_type",
+            default=ScheduleType.ONE_TIME.value,
+        ): vol.In([schedule.value for schedule in ScheduleType]),
+        vol.Optional("due_at"): cv.datetime,
+        vol.Optional("interval_days"): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=1),
+        ),
     }
 )
 
@@ -56,11 +68,38 @@ async def async_register_services(hass: HomeAssistant) -> None:
         """Add a new HomeBase chore."""
         storage = _get_storage(hass)
 
+        schedule_type = ScheduleType(call.data["schedule_type"])
+        interval_days = call.data.get("interval_days")
+        due_at = call.data.get("due_at")
+
+        if due_at is not None:
+            due_at = dt_util.as_utc(due_at)
+
+        if schedule_type in (
+            ScheduleType.FIXED,
+            ScheduleType.RELATIVE,
+        ):
+            if interval_days is None:
+                raise ServiceValidationError(
+                    "Repeat interval is required for recurring chores"
+                )
+
+            if due_at is None:
+                due_at = utc_now() + timedelta(days=interval_days)
+
+        elif interval_days is not None:
+            raise ServiceValidationError(
+                "Repeat interval can only be used with recurring chores"
+            )
+
         chore = Chore(
             name=call.data["name"],
             description=call.data["description"],
             area=call.data.get("area"),
             assignee=call.data.get("assignee"),
+            schedule_type=schedule_type,
+            due_at=due_at,
+            interval_days=interval_days,
         )
 
         await storage.async_add_chore(chore)
