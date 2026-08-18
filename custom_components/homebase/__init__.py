@@ -12,6 +12,14 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
+
+from .maintenance_services import (
+    async_register_maintenance_services,
+)
+from .maintenance_websocket import (
+    async_register_maintenance_websocket_api,
+)
 from .reminder_actions import async_setup_reminder_actions
 from .reminders import (
     REMINDER_CHECK_INTERVAL,
@@ -38,7 +46,10 @@ PANEL_PATH = Path(__file__).parent / "frontend"
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up HomeBase."""
     await async_register_services(hass)
+    await async_register_maintenance_services(hass)
+
     async_register_websocket_api(hass)
+    async_register_maintenance_websocket_api(hass)
 
     await hass.http.async_register_static_paths(
         [
