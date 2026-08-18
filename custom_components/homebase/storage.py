@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 
 from .const import STORAGE_KEY, STORAGE_VERSION
+from .maintenance_storage import MaintenanceStorage
 from .models import Chore
 
 
@@ -22,6 +23,7 @@ class HomeBaseStorage:
         )
         self._chores: dict[str, Chore] = {}
         self._listeners: set[Callable[[], None]] = set()
+        self.maintenance = MaintenanceStorage(hass)
 
     @property
     def chores(self) -> list[Chore]:
@@ -50,7 +52,8 @@ class HomeBaseStorage:
             listener()
 
     async def async_load(self) -> None:
-        """Load chores from Home Assistant storage."""
+        """Load HomeBase persistent data."""
+        await self.maintenance.async_load()
         data = await self._store.async_load()
 
         if data is None:
