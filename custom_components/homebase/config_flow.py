@@ -15,9 +15,14 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_DUE_REMINDERS_ENABLED,
+    CONF_MAINTENANCE_DUE_REMINDERS_ENABLED,
+    CONF_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
+    CONF_MAINTENANCE_REMINDER_ACTION,
     CONF_OVERDUE_REMINDERS_ENABLED,
     CONF_REMINDER_ACTION,
     DEFAULT_DUE_REMINDERS_ENABLED,
+    DEFAULT_MAINTENANCE_DUE_REMINDERS_ENABLED,
+    DEFAULT_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
     DEFAULT_OVERDUE_REMINDERS_ENABLED,
     DOMAIN,
 )
@@ -67,12 +72,32 @@ class HomeBaseOptionsFlow(OptionsFlow):
                     CONF_DUE_REMINDERS_ENABLED,
                     default=DEFAULT_DUE_REMINDERS_ENABLED,
                 ): selector.BooleanSelector(),
+
                 vol.Optional(
                     CONF_OVERDUE_REMINDERS_ENABLED,
                     default=DEFAULT_OVERDUE_REMINDERS_ENABLED,
                 ): selector.BooleanSelector(),
+
                 vol.Optional(
                     CONF_REMINDER_ACTION,
+                ): selector.ActionSelector(),
+
+                vol.Optional(
+                    CONF_MAINTENANCE_DUE_REMINDERS_ENABLED,
+                    default=(
+                        DEFAULT_MAINTENANCE_DUE_REMINDERS_ENABLED
+                    ),
+                ): selector.BooleanSelector(),
+
+                vol.Optional(
+                    CONF_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
+                    default=(
+                        DEFAULT_MAINTENANCE_OVERDUE_REMINDERS_ENABLED
+                    ),
+                ): selector.BooleanSelector(),
+
+                vol.Optional(
+                    CONF_MAINTENANCE_REMINDER_ACTION,
                 ): selector.ActionSelector(),
             }
         )

@@ -12,7 +12,10 @@ from homeassistant.helpers.entity_platform import (
     AddConfigEntryEntitiesCallback,
 )
 
-from .const import SIGNAL_CHORE_REMINDER
+from .const import (
+    SIGNAL_CHORE_REMINDER,
+    SIGNAL_MAINTENANCE_REMINDER,
+)
 
 
 async def async_setup_entry(
@@ -24,6 +27,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             HomeBaseChoreReminderEvent(),
+            HomeBaseMaintenanceReminderEvent(),
         ]
     )
 
@@ -40,7 +44,7 @@ class HomeBaseChoreReminderEvent(EventEntity):
     _attr_should_poll = False
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to HomeBase reminder events."""
+        """Subscribe to HomeBase chore reminder events."""
         await super().async_added_to_hass()
 
         self.async_on_remove(
@@ -57,7 +61,44 @@ class HomeBaseChoreReminderEvent(EventEntity):
         event_type: str,
         event_attributes: dict[str, Any],
     ) -> None:
-        """Handle a reminder from the HomeBase scheduler."""
+        """Handle a reminder from the Chore scheduler."""
+        self._trigger_event(
+            event_type,
+            event_attributes,
+        )
+        self.async_write_ha_state()
+
+
+class HomeBaseMaintenanceReminderEvent(EventEntity):
+    """Represent HomeBase Maintenance reminder events."""
+
+    _attr_name = "HomeBase Maintenance Reminder"
+    _attr_unique_id = "homebase_maintenance_reminder"
+    _attr_event_types = [
+        "due",
+        "overdue",
+    ]
+    _attr_should_poll = False
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to HomeBase Maintenance reminder events."""
+        await super().async_added_to_hass()
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_MAINTENANCE_REMINDER,
+                self._handle_reminder,
+            )
+        )
+
+    @callback
+    def _handle_reminder(
+        self,
+        event_type: str,
+        event_attributes: dict[str, Any],
+    ) -> None:
+        """Handle a reminder from the Maintenance scheduler."""
         self._trigger_event(
             event_type,
             event_attributes,

@@ -18,17 +18,23 @@
   "options": {
     "step": {
       "init": {
-        "title": "Chore reminders",
-        "description": "Configure when HomeBase reminder actions are allowed to run and what Home Assistant should do when a reminder occurs.",
+        "title": "HomeBase reminders",
+        "description": "Configure Chore and Maintenance reminders separately, including the Home Assistant actions that should run.",
         "data": {
-          "due_reminders_enabled": "Due reminders",
-          "overdue_reminders_enabled": "Overdue reminders",
-          "reminder_action": "Reminder action"
+          "due_reminders_enabled": "Chore due reminders",
+          "overdue_reminders_enabled": "Chore overdue reminders",
+          "reminder_action": "Chore reminder action",
+          "maintenance_due_reminders_enabled": "Maintenance due reminders",
+          "maintenance_overdue_reminders_enabled": "Maintenance overdue reminders",
+          "maintenance_reminder_action": "Maintenance reminder action"
         },
         "data_description": {
-          "due_reminders_enabled": "Run the configured action when a chore becomes due today.",
-          "overdue_reminders_enabled": "Run the configured action when a chore becomes overdue.",
-          "reminder_action": "Choose one or more Home Assistant actions to run for chore reminders."
+          "due_reminders_enabled": "Run the configured Chore action when a chore becomes due today.",
+          "overdue_reminders_enabled": "Run the configured Chore action when a chore becomes overdue.",
+          "reminder_action": "Choose one or more Home Assistant actions to run for Chore reminders.",
+          "maintenance_due_reminders_enabled": "Run the configured Maintenance action when a maintenance item becomes due today.",
+          "maintenance_overdue_reminders_enabled": "Run the configured Maintenance action when a maintenance item becomes overdue.",
+          "maintenance_reminder_action": "Choose one or more Home Assistant actions to run for Maintenance reminders."
         }
       }
     }

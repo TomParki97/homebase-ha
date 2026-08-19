@@ -14,6 +14,12 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
+from .maintenance_reminder_actions import (
+    async_setup_maintenance_reminder_actions,
+)
+from .maintenance_reminders import (
+    async_check_maintenance_reminders,
+)
 from .maintenance_services import (
     async_register_maintenance_services,
 )
@@ -95,9 +101,22 @@ async def async_setup_entry(
         )
     )
 
+    entry.async_on_unload(
+        async_setup_maintenance_reminder_actions(
+            hass,
+            entry,
+        )
+    )
+
     async def async_check_reminders(now) -> None:
-        """Run the HomeBase chore reminder check."""
+        """Run the HomeBase reminder checks."""
         await async_check_chore_reminders(
+            hass,
+            storage,
+            now,
+        )
+
+        await async_check_maintenance_reminders(
             hass,
             storage,
             now,
@@ -111,10 +130,18 @@ async def async_setup_entry(
         )
     )
 
+    now = dt_util.now()
+
     await async_check_chore_reminders(
         hass,
         storage,
-        dt_util.now(),
+        now,
+    )
+
+    await async_check_maintenance_reminders(
+        hass,
+        storage,
+        now,
     )
 
     return True
