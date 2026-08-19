@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import Context, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.script import (
@@ -113,7 +113,8 @@ async def async_run_maintenance_reminder_action(
             _reminder_variables(
                 event_type,
                 attributes,
-            )
+            ),
+            context=Context(),
         )
 
     except Exception:
