@@ -12,6 +12,20 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
+
+from .maintenance_reminder_actions import (
+    async_setup_maintenance_reminder_actions,
+)
+from .maintenance_reminders import (
+    async_check_maintenance_reminders,
+)
+from .maintenance_services import (
+    async_register_maintenance_services,
+)
+from .maintenance_websocket import (
+    async_register_maintenance_websocket_api,
+)
 from .reminder_actions import async_setup_reminder_actions
 from .reminders import (
     REMINDER_CHECK_INTERVAL,
@@ -31,14 +45,17 @@ PLATFORMS: list[Platform] = [
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 PANEL_URL = "/homebase_static"
-PANEL_VERSION = "0.1.7"
+PANEL_VERSION = "0.1.8"
 PANEL_PATH = Path(__file__).parent / "frontend"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up HomeBase."""
     await async_register_services(hass)
+    await async_register_maintenance_services(hass)
+
     async_register_websocket_api(hass)
+    async_register_maintenance_websocket_api(hass)
 
     await hass.http.async_register_static_paths(
         [
@@ -84,9 +101,22 @@ async def async_setup_entry(
         )
     )
 
+    entry.async_on_unload(
+        async_setup_maintenance_reminder_actions(
+            hass,
+            entry,
+        )
+    )
+
     async def async_check_reminders(now) -> None:
-        """Run the HomeBase chore reminder check."""
+        """Run the HomeBase reminder checks."""
         await async_check_chore_reminders(
+            hass,
+            storage,
+            now,
+        )
+
+        await async_check_maintenance_reminders(
             hass,
             storage,
             now,
@@ -100,10 +130,18 @@ async def async_setup_entry(
         )
     )
 
+    now = dt_util.now()
+
     await async_check_chore_reminders(
         hass,
         storage,
-        dt_util.now(),
+        now,
+    )
+
+    await async_check_maintenance_reminders(
+        hass,
+        storage,
+        now,
     )
 
     return True

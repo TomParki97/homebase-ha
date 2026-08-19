@@ -10,7 +10,7 @@
     "panel_custom"
   ],
   "documentation": "https://github.com/TomParki97/homebase-ha#readme",
-  "integration_type": "helper",
+  "integration_type": "hub",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/TomParki97/homebase-ha/issues",
   "single_config_entry": true,

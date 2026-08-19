@@ -1,4 +1,4 @@
-"""Configurable reminder actions for HomeBase."""
+"""Configurable Maintenance reminder actions for HomeBase."""
 
 from copy import deepcopy
 import logging
@@ -14,13 +14,13 @@ from homeassistant.helpers.script import (
 )
 
 from .const import (
-    CONF_DUE_REMINDERS_ENABLED,
-    CONF_OVERDUE_REMINDERS_ENABLED,
-    CONF_REMINDER_ACTION,
-    DEFAULT_DUE_REMINDERS_ENABLED,
-    DEFAULT_OVERDUE_REMINDERS_ENABLED,
+    CONF_MAINTENANCE_DUE_REMINDERS_ENABLED,
+    CONF_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
+    CONF_MAINTENANCE_REMINDER_ACTION,
+    DEFAULT_MAINTENANCE_DUE_REMINDERS_ENABLED,
+    DEFAULT_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
     DOMAIN,
-    SIGNAL_CHORE_REMINDER,
+    SIGNAL_MAINTENANCE_REMINDER,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,17 +30,17 @@ def _reminder_enabled(
     entry: ConfigEntry,
     event_type: str,
 ) -> bool:
-    """Return whether an action should run for this reminder type."""
+    """Return whether this Maintenance reminder action is enabled."""
     if event_type == "due":
         return entry.options.get(
-            CONF_DUE_REMINDERS_ENABLED,
-            DEFAULT_DUE_REMINDERS_ENABLED,
+            CONF_MAINTENANCE_DUE_REMINDERS_ENABLED,
+            DEFAULT_MAINTENANCE_DUE_REMINDERS_ENABLED,
         )
 
     if event_type == "overdue":
         return entry.options.get(
-            CONF_OVERDUE_REMINDERS_ENABLED,
-            DEFAULT_OVERDUE_REMINDERS_ENABLED,
+            CONF_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
+            DEFAULT_MAINTENANCE_OVERDUE_REMINDERS_ENABLED,
         )
 
     return False
@@ -50,13 +50,16 @@ def _reminder_variables(
     event_type: str,
     attributes: dict[str, Any],
 ) -> dict[str, Any]:
-    """Build variables available to configured reminder actions."""
+    """Build variables available to Maintenance reminder actions."""
     return {
         "homebase_reminder_type": event_type,
-        "homebase_chore_id": attributes.get("chore_id"),
-        "homebase_chore_name": attributes.get("name"),
+        "homebase_maintenance_id": attributes.get(
+            "maintenance_id"
+        ),
+        "homebase_maintenance_name": attributes.get("name"),
         "homebase_description": attributes.get("description"),
         "homebase_area": attributes.get("area"),
+        "homebase_asset": attributes.get("asset"),
         "homebase_assignee": attributes.get("assignee"),
         "homebase_status": attributes.get("status"),
         "homebase_schedule_type": attributes.get(
@@ -69,17 +72,19 @@ def _reminder_variables(
     }
 
 
-async def async_run_reminder_action(
+async def async_run_maintenance_reminder_action(
     hass: HomeAssistant,
     entry: ConfigEntry,
     event_type: str,
     attributes: dict[str, Any],
 ) -> None:
-    """Run the user-configured action for a chore reminder."""
+    """Run the configured Maintenance reminder action."""
     if not _reminder_enabled(entry, event_type):
         return
 
-    sequence = entry.options.get(CONF_REMINDER_ACTION)
+    sequence = entry.options.get(
+        CONF_MAINTENANCE_REMINDER_ACTION
+    )
 
     if not sequence:
         return
@@ -97,10 +102,10 @@ async def async_run_reminder_action(
         action_script = Script(
             hass,
             validated_sequence,
-            "HomeBase chore reminder",
+            "HomeBase maintenance reminder",
             DOMAIN,
             running_description=(
-                "HomeBase chore reminder action"
+                "HomeBase maintenance reminder action"
             ),
         )
 
@@ -114,27 +119,31 @@ async def async_run_reminder_action(
 
     except Exception:
         _LOGGER.exception(
-            "Error running HomeBase %s reminder action for %s",
+            "Error running HomeBase %s Maintenance reminder "
+            "action for %s",
             event_type,
-            attributes.get("name", "unknown chore"),
+            attributes.get(
+                "name",
+                "unknown maintenance item",
+            ),
         )
 
 
 @callback
-def async_setup_reminder_actions(
+def async_setup_maintenance_reminder_actions(
     hass: HomeAssistant,
     entry: ConfigEntry,
 ):
-    """Subscribe to HomeBase chore reminder signals."""
+    """Subscribe to HomeBase Maintenance reminder signals."""
 
     @callback
     def handle_reminder(
         event_type: str,
         attributes: dict[str, Any],
     ) -> None:
-        """Schedule the configured reminder action."""
+        """Schedule the configured Maintenance action."""
         hass.async_create_task(
-            async_run_reminder_action(
+            async_run_maintenance_reminder_action(
                 hass,
                 entry,
                 event_type,
@@ -144,6 +153,6 @@ def async_setup_reminder_actions(
 
     return async_dispatcher_connect(
         hass,
-        SIGNAL_CHORE_REMINDER,
+        SIGNAL_MAINTENANCE_REMINDER,
         handle_reminder,
     )

@@ -93,3 +93,95 @@ remove_chore:
       required: true
       selector:
         text:
+add_maintenance:
+  name: Add maintenance
+  description: Add a new maintenance item to HomeBase.
+  fields:
+    name:
+      name: Name
+      description: Name of the maintenance item.
+      required: true
+      selector:
+        text:
+    description:
+      name: Description
+      description: Optional maintenance details.
+      selector:
+        text:
+          multiline: true
+    area:
+      name: Area
+      description: Area of the home associated with this maintenance.
+      selector:
+        text:
+    asset:
+      name: Asset
+      description: Asset or equipment associated with this maintenance.
+      selector:
+        text:
+    assignee:
+      name: Assignee
+      description: Person responsible for this maintenance.
+      selector:
+        text:
+    schedule_type:
+      name: Schedule type
+      description: How HomeBase should schedule this maintenance.
+      default: one_time
+      selector:
+        select:
+          options:
+            - label: One time
+              value: one_time
+            - label: Fixed cycle
+              value: fixed
+            - label: After completion
+              value: relative
+    due_at:
+      name: First due
+      description: When this maintenance is first due.
+      selector:
+        datetime:
+    interval_days:
+      name: Repeat every
+      description: Number of days between recurring maintenance.
+      selector:
+        number:
+          min: 1
+          max: 3650
+          step: 1
+          mode: box
+          unit_of_measurement: days
+
+complete_maintenance:
+  name: Complete maintenance
+  description: Mark a HomeBase maintenance item as completed.
+  fields:
+    maintenance_id:
+      name: Maintenance ID
+      description: Unique ID of the maintenance item.
+      required: true
+      selector:
+        text:
+    completed_by:
+      name: Completed by
+      description: Person who completed the maintenance.
+      selector:
+        text:
+    note:
+      name: Note
+      description: Optional note about this maintenance completion.
+      selector:
+        text:
+          multiline: true
+
+remove_maintenance:
+  name: Remove maintenance
+  description: Permanently remove a maintenance item from HomeBase.
+  fields:
+    maintenance_id:
+      name: Maintenance ID
+      description: Unique ID of the maintenance item to remove.
+      required: true
+      selector:
+        text:
