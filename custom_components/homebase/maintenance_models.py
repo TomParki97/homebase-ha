@@ -101,6 +101,9 @@ class MaintenanceItem:
         default_factory=list
     )
 
+    due_reminder_sent_for: datetime | None = None
+    overdue_reminder_sent_for: datetime | None = None
+
     def status_at(
         self,
         now: datetime,
@@ -222,6 +225,16 @@ class MaintenanceItem:
                 completion.to_dict()
                 for completion in self.completion_history
             ],
+            "due_reminder_sent_for": (
+                self.due_reminder_sent_for.isoformat()
+                if self.due_reminder_sent_for
+                else None
+            ),
+            "overdue_reminder_sent_for": (
+                self.overdue_reminder_sent_for.isoformat()
+                if self.overdue_reminder_sent_for
+                else None
+            ),
         }
 
     @classmethod
@@ -277,4 +290,10 @@ class MaintenanceItem:
                 for completion
                 in data.get("completion_history", [])
             ],
+            due_reminder_sent_for=datetime_from_storage(
+                data.get("due_reminder_sent_for")
+            ),
+            overdue_reminder_sent_for=datetime_from_storage(
+                data.get("overdue_reminder_sent_for")
+            ),
         )
